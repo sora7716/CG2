@@ -451,6 +451,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
 
+	//マテリアル用のリソースを作る。
+	ID3D12Resource* materialResource = CreateBufferResource(device, sizeof(Vector4));
+	//マテリアルにデータを書き込む
+	Vector4* materialData = nullptr;
+	//書き込むためのアドレスを取得
+	materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
+	//今回は赤を書き込んでおく
+	*materialData = RED;
+
 	//実際に貯点リソースを作る
 	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(Vector4) * 3);
 
@@ -535,6 +544,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);//VBVを設定
 			//形状を設定。PSOに設定しているものとはまた別。同じものを設定すると考えておけば良い
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			//マテリアルCBufferの場所を設定(第一引数の0はRootParameterの配列の0番目を際しておりregisterの0ではない)
+			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
 			//描画!(DrawCall/ドローコール)。3頂点で1つのインスタンス。
 			commandList->DrawInstanced(3, 1, 0, 0);
 
@@ -598,6 +609,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	rootSignature->Release();
 	pixelShaderBlob->Release();
 	vertexShaderBlob->Release();
+	materialResource->Release();
 
 	//リソースリークチェック
 	IDXGIDebug1* debug;
