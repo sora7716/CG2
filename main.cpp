@@ -11,7 +11,10 @@
 #include <dxcapi.h>
 #pragma comment(lib,"dxcompiler.lib")
 #include <cassert>
-#include "math/Vector4.h"
+#include "Vector4.h"
+#include "Matrix4x4.h"
+#include "func/Math.h"
+#include "rendering/Rendering.h"
 
 //ウィンドウプロシージャ
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -380,10 +383,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
 	//RootParameterを作成
-	D3D12_ROOT_PARAMETER rootParameters[1] = {};
+	D3D12_ROOT_PARAMETER rootParameters[2] = {};
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;//CBVを使う(b0のbと一致する)
 	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;//PixelShaderを使う
 	rootParameters[0].Descriptor.ShaderRegister = 0;//レジスタ番号0とバインド(b0の0と一致する。もしb11と一致させたかったら11を代入する)
+	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;//CBVを使う(b0のbと一致する)
+	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;//VertexShaderを使う
+	rootParameters[1].Descriptor.ShaderRegister = 0;//レジスタ番号0とバインド(b0の0と一致する。もしb11と一致させたかったら11を代入する)
 	descriptionRootSignature.pParameters = rootParameters;//ルートパラメータ配列のポインタ
 	descriptionRootSignature.NumParameters = _countof(rootParameters);//配列の長さ
 	//シリアライズしてバイナリにする
@@ -460,6 +466,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//今回は赤を書き込んでおく
 	*materialData = RED;
 
+	//WVP用のリソースを作る
+	ID3D12Resource* wvpResource = CreateBufferResource(device, sizeof(Matrix4x4));
+	//データを書き込む
+	Matrix4x4* wvpData = nullptr;
+	//書き込むためのアドレスを取得
+	wvpResource->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
+	//単位行列を書き込んでおく
+	*wvpData = Math::MakeIdentity4x4();
+
 	//実際に貯点リソースを作る
 	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(Vector4) * 3);
 
@@ -501,6 +516,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	scissorRect.top = 0;
 	scissorRect.bottom = kClientHeight;
 
+	//Transform変数を作る
+	Transform transform{ .scale = {1.0f,1.0f,1.0f},.rotate = {},.translate = {} };
+	//カメラTransform変数を作る
+	Transform cameraTransform{ .scale{1.0f,1.0f,1.0f},.rotate = {},.translate = {0.0f,0.0f,-5.0f} };
+	
 	MSG msg{};
 	//ウィンドウの✖ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
@@ -512,6 +532,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		else {
 			//ウィンドウの表示
 			ShowWindow(hwnd, SW_SHOW);
+
+			//変数の更新
+			transform.rotate.y += 0.01f;
+			Matrix4x4 worldMatrix = Math::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+			Matrix4x4 cameraMatrix = Math::MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
+			Matrix4x4 viewMatrix = ~cameraMatrix;
+			//透視投影行列
+			Matrix4x4 projectMatrix = Math::MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
+			Matrix4x4 worldViewProjectionMatrix = worldMatrix * viewMatrix * projectMatrix;
+			*wvpData = worldViewProjectionMatrix;
 
 			//これから書き込むバックバッファのインデックスを取得
 			UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
@@ -546,6 +576,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			//マテリアルCBufferの場所を設定(第一引数の0はRootParameterの配列の0番目を際しておりregisterの0ではない)
 			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
+			//wvp用のCBufferの場所を設定
+			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
 			//描画!(DrawCall/ドローコール)。3頂点で1つのインスタンス。
 			commandList->DrawInstanced(3, 1, 0, 0);
 
@@ -610,6 +642,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	pixelShaderBlob->Release();
 	vertexShaderBlob->Release();
 	materialResource->Release();
+	wvpResource->Release();
 
 	//リソースリークチェック
 	IDXGIDebug1* debug;
