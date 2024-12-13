@@ -136,6 +136,33 @@ IDxcBlob* CompilerShader(
 	return shaderBlob;
 }
 
+/// <summary>
+/// バッファのリソースの生成
+/// </summary>
+/// <param name="device"></param>
+/// <param name="sizeInBytes"></param>
+/// <returns></returns>
+ID3D12Resource*CreateBufferResource(ID3D12Device* device,size_t sizeInBytes) {
+	//頂点リソース用のヒープの設定
+	D3D12_HEAP_PROPERTIES uploadHeapProperities{};
+	uploadHeapProperities.Type = D3D12_HEAP_TYPE_UPLOAD;//UploadHeapを使う
+	//頂点リソースの設定
+	D3D12_RESOURCE_DESC vertexResourceDesc{};
+	//バッファリソース。テクスチャの場合はまた別の設定をする
+	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	vertexResourceDesc.Width = sizeInBytes;//リソースのサイズ。
+	//バッファの場合はこれらは1にする決まり
+	vertexResourceDesc.Height = 1;
+	vertexResourceDesc.DepthOrArraySize = 1;
+	vertexResourceDesc.MipLevels = 1;
+	vertexResourceDesc.SampleDesc.Count = 1;
+	//バッファの場合はこれにする決まり
+	vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	//実際に貯点リソースを作る
+	ID3D12Resource* resource = nullptr;
+	device->CreateCommittedResource(&uploadHeapProperities, D3D12_HEAP_FLAG_NONE, &vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&resource));
+	return resource;
+}
 //Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	WNDCLASS wc{};
@@ -351,6 +378,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//RootSignature作成
 	D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
 	descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+	//RootParameterを作成
+	D3D12_ROOT_PARAMETER rootParameters[1] = {};
+	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;//CBVを使う(b0のbと一致する)
+	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;//PixelShaderを使う
+	rootParameters[0].Descriptor.ShaderRegister = 0;//レジスタ番号0とバインド(b0の0と一致する。もしb11と一致させたかったら11を代入する)
+	descriptionRootSignature.pParameters = rootParameters;//ルートパラメータ配列のポインタ
+	descriptionRootSignature.NumParameters = _countof(rootParameters);//配列の長さ
 	//シリアライズしてバイナリにする
 	ID3DBlob* signatureBlob = nullptr;
 	ID3DBlob* errorBlob = nullptr;
@@ -416,25 +451,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
 
-	//頂点リソース用のヒープの設定
-	D3D12_HEAP_PROPERTIES uploadHeapProperities{};
-	uploadHeapProperities.Type = D3D12_HEAP_TYPE_UPLOAD;//UploadHeapを使う
-	//頂点リソースの設定
-	D3D12_RESOURCE_DESC vertexResourceDesc{};
-	//バッファリソース。テクスチャの場合はまた別の設定をする
-	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	vertexResourceDesc.Width = sizeof(Vector4) * 3;//リソースのサイズ。今回はVector4を3頂点分
-	//バッファの場合はこれらは1にする決まり
-	vertexResourceDesc.Height = 1;
-	vertexResourceDesc.DepthOrArraySize = 1;
-	vertexResourceDesc.MipLevels = 1;
-	vertexResourceDesc.SampleDesc.Count = 1;
-	//バッファの場合はこれにする決まり
-	vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 	//実際に貯点リソースを作る
-	ID3D12Resource* vertexResource = nullptr;
-	hr = device->CreateCommittedResource(&uploadHeapProperities, D3D12_HEAP_FLAG_NONE, &vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexResource));
-	assert(SUCCEEDED(hr));
+	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(Vector4) * 3);
 
 	//VertexBufferViewを作成する(頂点バッファービュー)
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
