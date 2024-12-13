@@ -576,14 +576,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			ShowWindow(hwnd, SW_SHOW);
 			//開発用UIの処理。実際に開発用UIを生み出す場合はここをゲーム固有の処理に置き換える
 			ImGui::ShowDemoWindow();
-			//変数の更新
+			//回転させる
 			transform.rotate.y += 0.01f;
-			Matrix4x4 worldMatrix = Math::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
-			Matrix4x4 cameraMatrix = Math::MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
-			Matrix4x4 viewMatrix = ~cameraMatrix;
-			//透視投影行列
-			Matrix4x4 projectMatrix = Math::MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
-			Matrix4x4 worldViewProjectionMatrix = worldMatrix * viewMatrix * projectMatrix;
+			Matrix4x4 worldMatrix = Math::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);//ワールド行列
+			Matrix4x4 cameraMatrix = Math::MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);//カメラ行列
+			Matrix4x4 viewMatrix = ~cameraMatrix;//
+			Matrix4x4 projectMatrix = Math::MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);//透視投影行列
+			Matrix4x4 worldViewProjectionMatrix = worldMatrix * viewMatrix * projectMatrix;//WVP行列
 			*wvpData = worldViewProjectionMatrix;
 			//ImGuiの内部コマンドを生成する
 			ImGui::Render();
