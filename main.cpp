@@ -11,10 +11,10 @@
 #include <dxcapi.h>
 #pragma comment(lib,"dxcompiler.lib")
 #include <cassert>
-#include "Vector4.h"
-#include "Matrix4x4.h"
-#include "func/Math.h"
-#include "rendering/Rendering.h"
+#include "math/Vector4.h"
+#include "math/Matrix4x4.h"
+#include "math/rendering/Rendering.h"
+#include "math/func/Math.h"
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_impl_dx12.h"
 #include "externals/imgui/imgui_impl_win32.h"
@@ -579,7 +579,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			//開発用UIの処理。実際に開発用UIを生み出す場合はここをゲーム固有の処理に置き換える
 			ImGui::ShowDemoWindow();
 			//回転させる
-			transform.rotate.y += 0.01f;
+			transform.rotate.y += 0.005f;
 			Matrix4x4 worldMatrix = Math::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);//ワールド行列
 			Matrix4x4 cameraMatrix = Math::MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);//カメラ行列
 			Matrix4x4 viewMatrix = ~cameraMatrix;//
