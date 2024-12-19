@@ -1,5 +1,6 @@
 #pragma once
 #define RED Vector4(1.0f,0.0f,0.0f,1.0f)
+#define WHITE Vector4(1.0f,1.0f,1.0f,1.0f)
 
 /// <summary>
 /// ベクトル4
