@@ -160,7 +160,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//エラー時に止まる
 		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
 		//警告時に止まる
-		//infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
+		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
 		//抑制するメッセージのID
 		D3D12_MESSAGE_ID denyIds[] = {
 			//Windouws11でのDXGIデバックレイヤーとDX12デバックレイヤーの相互作用によるエラーメッセージ
