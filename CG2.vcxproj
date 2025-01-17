@@ -54,7 +54,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>C:\Users\PC_User\Documents\GitHub\CG2\math;%(AdditionalIncludeDirectories);C:\Subject\CG\CG2\DirectXGame\CG2\math;C:\Subject\CG\CG2\DirectXGame\CG2\externals</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\PC_User\Documents\GitHub\CG2\math;%(AdditionalIncludeDirectories);C:\Subject\CG\CG2\DirectXGame\CG2\math;C:\Users\PC_User\Documents\GitHub\CG2\externals</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
